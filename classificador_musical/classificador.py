@@ -4,12 +4,14 @@ import os
 
 from banco_vetorial import BancoVetorial
 from extrator_features import ExtratorFeatures
+from visualizador import Visualizador
 
 
 class ClassificadorMusical:
     def __init__(self):
         self.extrator = ExtratorFeatures()
         self.banco = BancoVetorial()
+        self.visualizador = Visualizador()
 
     def adicionar_musica(self, caminho, genero):
         """Adiciona uma música ao banco."""
@@ -24,7 +26,7 @@ class ClassificadorMusical:
         print(f"✓ Adicionada: {nome} ({genero})")
 
     def classificar_musica(self, caminho, k=5, mostrar_calculos=True):
-        """Classifica uma música."""
+        """Classifica uma música e retorna os resultados."""
         if self.banco.total() == 0:
             print("Erro: Adicione músicas primeiro!")
             return None
@@ -47,39 +49,51 @@ class ClassificadorMusical:
         for i, v in enumerate(vizinhos, 1):
             print(f"{i}. {v['nome']} - {v['genero']} (dist: {v['distancia']:.4f})")
 
-        # Votação híbrida: combina contagem com peso por distância
-        print("\n--- VOTAÇÃO HÍBRIDA ---")
+        # Votação por maioria simples
+        print("\n--- VOTAÇÃO ---")
         votos = {}
-        peso_total = {}
 
-        for i, v in enumerate(vizinhos):
+        for v in vizinhos:
             genero = v["genero"]
-            # Peso inversamente proporcional à distância
-            peso = 1.0 / (v["distancia"] + 1.0)
-
             votos[genero] = votos.get(genero, 0) + 1
-            peso_total[genero] = peso_total.get(genero, 0) + peso
 
-        # Score híbrido: 50% peso por distância + 50% peso por votação
-        score_final = {}
-        max_votos = max(votos.values())
-        sum_peso = sum(peso_total.values())
+        for genero, contagem in votos.items():
+            print(f"{genero}: {contagem} votos")
 
-        for genero in votos.keys():
-            peso_norm = peso_total[genero] / sum_peso
-            voto_norm = votos[genero] / max_votos
-            score_final[genero] = 0.5 * peso_norm + 0.5 * voto_norm
-            print(
-                f"{genero}: {votos[genero]} votos, peso: {peso_total[genero]:.4f}, score: {score_final[genero]:.4f}"
-            )
-
-        # Escolhe o gênero com maior score final
-        genero_final = max(score_final, key=score_final.get)
-        confianca = (score_final[genero_final] / sum(score_final.values())) * 100
+        # Escolhe o gênero com mais votos
+        genero_final = max(votos, key=votos.get)
+        confianca = (votos[genero_final] / k) * 100
 
         print(f"\n{'=' * 40}")
         print(f"RESULTADO: {genero_final}")
         print(f"Confiança: {confianca:.1f}%")
         print(f"{'=' * 40}")
 
-        return genero_final
+        # Gera visualização automaticamente
+        nome_musica = os.path.basename(caminho)
+        print("\nGerando visualização...")
+
+        fig = self.visualizador.plotar_resultados(
+            nome_musica=nome_musica,
+            vizinhos=vizinhos,
+            votos=votos,
+            genero_final=genero_final,
+            confianca=confianca,
+            k=k,
+        )
+
+        # Salva o gráfico
+        nome_arquivo = os.path.splitext(nome_musica)[0]
+        caminho_saida = f"classificacao_{nome_arquivo}.png"
+        self.visualizador.salvar_grafico(fig, caminho_saida)
+
+        # Retorna dicionário com todos os dados
+        return {
+            "genero": genero_final,
+            "confianca": confianca,
+            "vizinhos": vizinhos,
+            "votos": votos,
+            "k": k,
+            "nome_musica": nome_musica,
+            "grafico": caminho_saida,
+        }
