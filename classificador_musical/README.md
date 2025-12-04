@@ -41,7 +41,7 @@ print(f"Gênero: {genero}")
 
 1. **Extração de Features**: Extrai 29 características da música (MFCC, Centroid, Rolloff, etc)
 2. **Armazenamento**: Salva os vetores no ChromaDB (banco de dados vetorial)
-3. **Classificação**: Busca as k músicas mais similares e vota no gênero
+3. **Classificação**: Calcula a distância euclidiana simples para encontrar as k músicas mais similares e vota no gênero
 
 ## Estrutura
 
